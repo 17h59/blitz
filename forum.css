@@ -154,6 +154,9 @@
     line-height: 1.6;
     margin-bottom: 12px;
     font-size: 14px;
+    word-wrap: break-word;
+    word-break: break-word;
+    overflow-wrap: break-word;
 }
 
 .post-image {
@@ -310,6 +313,9 @@
     font-size: 14px;
     line-height: 1.5;
     margin-bottom: 8px;
+    word-wrap: break-word;
+    word-break: break-word;
+    overflow-wrap: break-word;
 }
 
 .comment-actions {

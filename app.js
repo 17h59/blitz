@@ -14,6 +14,7 @@ const AppState = {
     isAdmin: false,
     bio: '',
     profilePic: '',
+    emojiAvatar: '',
     currentChannel: 'general',
     currentView: 'chat',
     lastMessageId: 0,
@@ -123,22 +124,27 @@ const Utils = {
         return `hsl(${hash % 360}, 65%, 50%)`;
     },
 
-    createPfp(pseudo, size = 40, profilePic = '') {
+    createPfp(pseudo, size = 40, profilePic = '', emojiAvatar = '') {
         const pfp = document.createElement('div');
         pfp.className = 'pfp';
         pfp.style.width = `${size}px`;
         pfp.style.height = `${size}px`;
-        pfp.style.fontSize = `${size * 0.4}px`;
-        
-        if (profilePic && profilePic !== '') {
+
+        // Priorité : emoji > photo > initiale
+        if (emojiAvatar && emojiAvatar !== '') {
+            pfp.style.fontSize = `${size * 0.6}px`;
+            pfp.textContent = emojiAvatar;
+            pfp.style.backgroundColor = 'transparent';
+        } else if (profilePic && profilePic !== '') {
             pfp.style.backgroundImage = `url(${profilePic})`;
             pfp.style.backgroundSize = 'cover';
             pfp.style.backgroundPosition = 'center';
         } else {
+            pfp.style.fontSize = `${size * 0.4}px`;
             pfp.style.backgroundColor = this.generateColor(pseudo);
             pfp.textContent = pseudo.charAt(0).toUpperCase();
         }
-        
+
         return pfp;
     },
 
@@ -369,13 +375,14 @@ const Auth = {
         AppState.isAdmin = data.is_admin === 1 || data.is_admin === true;
         AppState.bio = data.bio || '';
         AppState.profilePic = data.profile_pic || '';
+        AppState.emojiAvatar = data.emoji_avatar || '';
 
         document.getElementById('loginModal').style.display = 'none';
         document.getElementById('app').style.display = 'block';
 
         document.getElementById('currentUsername').textContent = AppState.pseudo;
         const currentUserPfp = document.getElementById('currentUserPfp');
-        const pfp = Utils.createPfp(AppState.pseudo, 32, AppState.profilePic);
+        const pfp = Utils.createPfp(AppState.pseudo, 32, AppState.profilePic, AppState.emojiAvatar);
         currentUserPfp.replaceWith(pfp);
         pfp.id = 'currentUserPfp';
 
@@ -508,18 +515,27 @@ const Chat = {
         const container = document.getElementById('messages');
         const wasAtBottom = container.scrollHeight - container.scrollTop <= container.clientHeight + 50;
 
-        container.innerHTML = '';
-
         const messages = AppState.messagesCache.general.sort((a, b) => a.id - b.id);
 
+        // Identifier les messages déjà affichés
+        const existingMsgIds = new Set();
+        container.querySelectorAll('.message[data-msg-id]').forEach(el => {
+            existingMsgIds.add(parseInt(el.dataset.msgId));
+        });
+
+        // Ajouter seulement les nouveaux messages
         messages.forEach((msg, index) => {
+            if (existingMsgIds.has(msg.id)) {
+                return; // Message déjà affiché
+            }
+
             const messageEl = document.createElement('div');
             messageEl.className = 'message';
             messageEl.dataset.msgId = msg.id;
 
             const prevMsg = index > 0 ? messages[index - 1] : null;
             let shouldCompress = false;
-            
+
             if (prevMsg && prevMsg.pseudo === msg.pseudo && msg.timestamp - prevMsg.timestamp < 300) {
                 shouldCompress = true;
             }
@@ -529,18 +545,18 @@ const Chat = {
                 const textEl = document.createElement('div');
                 textEl.className = 'message-text-only';
                 textEl.innerHTML = Utils.parseMarkdown(msg.message);
-                
+
                 const timeEl = document.createElement('span');
                 timeEl.className = 'message-time-inline';
                 timeEl.textContent = Utils.formatTime(msg.timestamp);
-                
+
                 textEl.appendChild(timeEl);
                 messageEl.appendChild(textEl);
             } else {
                 const pfp = Utils.createPfp(msg.pseudo, 40, msg.profile_pic || '');
                 pfp.style.cursor = 'pointer';
                 pfp.addEventListener('click', () => Profile.show(msg.pseudo));
-                
+
                 const contentEl = document.createElement('div');
                 contentEl.className = 'message-content';
 
@@ -611,17 +627,41 @@ const DM = {
             document.getElementById('dmsList').prepend(dmItem);
         }
         dmItem.classList.add('active');
-        
+
+        // Réinitialiser le compteur de non-lus et masquer le badge
+        AppState.unreadDMs[withUser] = 0;
+        const badge = dmItem.querySelector('.dm-badge');
+        if (badge) {
+            badge.style.display = 'none';
+        }
+
+        // Marquer les messages comme lus côté serveur
+        this.markAsRead(withUser);
+
         // Initialiser le cache si nécessaire
         if (!AppState.messagesCache.dms[withUser]) {
             AppState.messagesCache.dms[withUser] = [];
             AppState.lastDmId[withUser] = 0;
         }
-        
+
         // Charger les messages existants
         await this.loadMessages(withUser);
-        
+
         console.log('✅ DM ouvert');
+    },
+
+    async markAsRead(fromUser) {
+        try {
+            const formData = new FormData();
+            formData.append('from_user', fromUser);
+
+            await fetch('mark_dm_read.php', {
+                method: 'POST',
+                body: formData
+            });
+        } catch (error) {
+            console.error('Erreur marquage comme lu:', error);
+        }
     },
     
     async loadMessages(withUser) {
@@ -686,30 +726,59 @@ const DM = {
         const dmItem = document.createElement('div');
         dmItem.className = 'dm-item';
         dmItem.dataset.user = withUser;
-        
+
         const pfp = Utils.createPfp(withUser, 32);
-        
+
+        const contentWrapper = document.createElement('div');
+        contentWrapper.style.flex = '1';
+        contentWrapper.style.display = 'flex';
+        contentWrapper.style.flexDirection = 'column';
+
         const name = document.createElement('span');
         name.className = 'dm-item-name';
         name.textContent = withUser;
-        
+
+        const preview = document.createElement('span');
+        preview.className = 'dm-preview';
+        preview.textContent = '';
+        preview.style.fontSize = '12px';
+        preview.style.color = 'var(--text-tertiary)';
+        preview.style.overflow = 'hidden';
+        preview.style.textOverflow = 'ellipsis';
+        preview.style.whiteSpace = 'nowrap';
+
+        contentWrapper.appendChild(name);
+        contentWrapper.appendChild(preview);
+
+        const badge = document.createElement('span');
+        badge.className = 'dm-badge';
+        badge.style.display = 'none';
+        badge.textContent = '0';
+
         dmItem.appendChild(pfp);
-        dmItem.appendChild(name);
-        
+        dmItem.appendChild(contentWrapper);
+        dmItem.appendChild(badge);
+
         dmItem.addEventListener('click', () => {
             this.openConversation(withUser);
+            // Réinitialiser le compteur de non-lus
+            AppState.unreadDMs[withUser] = 0;
+            badge.style.display = 'none';
         });
-        
+
         return dmItem;
     },
     
     renderMessages(withUser) {
         const container = document.getElementById('messages');
-        container.innerHTML = '';
-        
+
         const messages = AppState.messagesCache.dms[withUser] || [];
-        
+
         if (messages.length === 0) {
+            // Vider seulement si vraiment vide
+            if (container.children.length > 0) {
+                container.innerHTML = '';
+            }
             const emptyEl = document.createElement('div');
             emptyEl.style.textAlign = 'center';
             emptyEl.style.color = 'var(--text-tertiary)';
@@ -718,49 +787,66 @@ const DM = {
             container.appendChild(emptyEl);
             return;
         }
-        
-        // Afficher les messages
+
+        // Retirer le message "Aucun message" s'il existe
+        const emptyState = container.querySelector('div[style*="textAlign"]');
+        if (emptyState) {
+            emptyState.remove();
+        }
+
+        // Identifier les messages déjà affichés
+        const existingMsgIds = new Set();
+        container.querySelectorAll('.message[data-msg-id]').forEach(el => {
+            existingMsgIds.add(parseInt(el.dataset.msgId));
+        });
+
+        // Ajouter seulement les nouveaux messages
         messages.sort((a, b) => a.timestamp - b.timestamp).forEach(msg => {
+            if (existingMsgIds.has(msg.id)) {
+                return; // Message déjà affiché
+            }
+
             const messageEl = document.createElement('div');
             messageEl.className = 'message';
-            
+            messageEl.dataset.msgId = msg.id;
+
             // Utiliser la photo de profil du message
             const pfp = Utils.createPfp(msg.from_user, 40, msg.profile_pic || '');
             pfp.style.cursor = 'pointer';
             pfp.addEventListener('click', () => Profile.show(msg.from_user));
-            
+
             const contentEl = document.createElement('div');
             contentEl.className = 'message-content';
-            
+
             const headerEl = document.createElement('div');
             headerEl.className = 'message-header';
-            
+
             const authorEl = document.createElement('span');
             authorEl.className = 'message-author';
             authorEl.textContent = msg.from_user;
             authorEl.style.cursor = 'pointer';
             authorEl.addEventListener('click', () => Profile.show(msg.from_user));
-            
+
             const timeEl = document.createElement('span');
             timeEl.className = 'message-time';
             timeEl.textContent = Utils.formatTime(msg.timestamp);
-            
+
             headerEl.appendChild(authorEl);
             headerEl.appendChild(timeEl);
-            
+
             const textEl = document.createElement('div');
             textEl.className = 'message-text';
             textEl.innerHTML = Utils.parseMarkdown(msg.message);
-            
+
             contentEl.appendChild(headerEl);
             contentEl.appendChild(textEl);
-            
+
             messageEl.appendChild(pfp);
             messageEl.appendChild(contentEl);
-            
+
             container.appendChild(messageEl);
         });
-        
+
         container.scrollTop = container.scrollHeight;
     },
     
@@ -825,6 +911,64 @@ const DM = {
                 this.renderMessages(to);
             }
             Toast.error('Erreur d\'envoi du message');
+        }
+    },
+
+    async checkAllDMs() {
+        try {
+            // Récupérer les DMs non lus pour tous les utilisateurs
+            const response = await fetch('get_unread_dms.php');
+            const data = await response.json();
+
+            if (data.success && data.unread) {
+                // Mettre à jour les badges et aperçus
+                Object.keys(data.unread).forEach(fromUser => {
+                    if (fromUser === AppState.pseudo) return;
+
+                    const dmData = data.unread[fromUser];
+                    let dmItem = document.querySelector(`.dm-item[data-user="${fromUser}"]`);
+
+                    if (!dmItem) {
+                        // Créer l'item s'il n'existe pas
+                        dmItem = this.createDmItem(fromUser);
+                        document.getElementById('dmsList').prepend(dmItem);
+                    }
+
+                    // Mettre à jour le badge
+                    const badge = dmItem.querySelector('.dm-badge');
+                    const preview = dmItem.querySelector('.dm-preview');
+
+                    if (dmData.count > 0 && AppState.currentChannel !== `dm:${fromUser}`) {
+                        AppState.unreadDMs[fromUser] = dmData.count;
+                        badge.textContent = dmData.count;
+                        badge.style.display = 'block';
+
+                        // Afficher l'aperçu du dernier message
+                        if (dmData.last_message) {
+                            const previewText = dmData.last_message.length > 30
+                                ? dmData.last_message.substring(0, 30) + '...'
+                                : dmData.last_message;
+                            preview.textContent = previewText;
+                        }
+
+                        // Afficher une notification
+                        if (dmData.count === 1) { // Nouvelle notification uniquement pour le premier
+                            Toast.info(`Nouveau message de ${fromUser}`);
+                            Utils.showNotification('Nouveau message privé', `${fromUser}: ${dmData.last_message}`);
+                        }
+                    } else {
+                        badge.style.display = 'none';
+                        if (dmData.last_message) {
+                            const previewText = dmData.last_message.length > 30
+                                ? dmData.last_message.substring(0, 30) + '...'
+                                : dmData.last_message;
+                            preview.textContent = previewText;
+                        }
+                    }
+                });
+            }
+        } catch (error) {
+            console.error('Erreur vérification DMs:', error);
         }
     }
 };
@@ -917,15 +1061,15 @@ const Profile = {
         try {
             const response = await fetch(`profile.php?pseudo=${encodeURIComponent(pseudo)}`);
             const data = await response.json();
-            
+
             if (data.success) {
                 const user = data.user;
-                
+
                 document.getElementById('profilePseudo').textContent = user.pseudo;
-                
+
                 const pfpLarge = document.getElementById('profilePicLarge');
                 pfpLarge.innerHTML = '';
-                const pfp = Utils.createPfp(user.pseudo, 100, user.profile_pic || '');
+                const pfp = Utils.createPfp(user.pseudo, 100, user.profile_pic || '', user.emoji_avatar || '');
                 pfpLarge.appendChild(pfp);
                 
                 document.getElementById('profileBioContent').textContent = user.bio || 'Aucune biographie';
@@ -965,63 +1109,72 @@ const Profile = {
 // PARAMÈTRES
 // ============================================
 const Settings = {
+    selectedEmoji: null,
+
     init() {
         document.getElementById('settingsBtn').addEventListener('click', () => {
             document.getElementById('bioInput').value = AppState.bio;
+            if (AppState.emojiAvatar) {
+                document.getElementById('currentEmojiPreview').textContent = AppState.emojiAvatar;
+                this.selectedEmoji = AppState.emojiAvatar;
+            }
             document.getElementById('settingsModal').style.display = 'flex';
         });
-        
+
         // Fermeture des modals
         document.getElementById('closeSettingsModal').addEventListener('click', () => {
             document.getElementById('settingsModal').style.display = 'none';
         });
-        
+
         document.getElementById('closeProfileModal').addEventListener('click', () => {
             document.getElementById('profileModal').style.display = 'none';
         });
-        
+
         // Fermeture en cliquant dehors
         document.getElementById('settingsModal').addEventListener('click', (e) => {
             if (e.target.id === 'settingsModal') {
                 document.getElementById('settingsModal').style.display = 'none';
             }
         });
-        
+
         document.getElementById('profileModal').addEventListener('click', (e) => {
             if (e.target.id === 'profileModal') {
                 document.getElementById('profileModal').style.display = 'none';
             }
         });
-        
+
         document.getElementById('saveBioBtn').addEventListener('click', () => this.saveBio());
-        
-        // Photo de profil simplifiée - upload direct au changement
-        const profilePicInput = document.getElementById('profilePicInput');
-        if (profilePicInput) {
-            profilePicInput.addEventListener('change', async (e) => {
-                if (e.target.files && e.target.files.length > 0) {
-                    await this.uploadProfilePic(e.target.files[0]);
-                }
+
+        // Sélection d'emoji
+        document.querySelectorAll('.emoji-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.preventDefault();
+                document.querySelectorAll('.emoji-btn').forEach(b => b.classList.remove('selected'));
+                btn.classList.add('selected');
+                this.selectedEmoji = btn.dataset.emoji;
+                document.getElementById('currentEmojiPreview').textContent = this.selectedEmoji;
             });
-        }
-        
+        });
+
+        document.getElementById('saveEmojiBtn').addEventListener('click', () => this.saveEmoji());
+
         document.getElementById('deleteAccountBtn').addEventListener('click', () => this.deleteAccount());
     },
     
     async saveBio() {
         const bio = document.getElementById('bioInput').value;
-        
+
         const formData = new FormData();
         formData.append('action', 'update_bio');
         formData.append('bio', bio);
-        
+
         try {
             const response = await fetch('profile.php', {
                 method: 'POST',
                 body: formData
             });
             const data = await response.json();
-            
+
             if (data.success) {
                 AppState.bio = bio;
                 Toast.success('Biographie mise à jour');
@@ -1029,6 +1182,43 @@ const Settings = {
                 Toast.error(data.error || 'Erreur');
             }
         } catch (error) {
+            Toast.error('Erreur serveur');
+        }
+    },
+
+    async saveEmoji() {
+        if (!this.selectedEmoji) {
+            Toast.warning('Sélectionne un emoji d\'abord');
+            return;
+        }
+
+        const formData = new FormData();
+        formData.append('action', 'update_emoji');
+        formData.append('emoji', this.selectedEmoji);
+
+        try {
+            const response = await fetch('profile.php', {
+                method: 'POST',
+                body: formData
+            });
+            const data = await response.json();
+
+            if (data.success) {
+                AppState.emojiAvatar = this.selectedEmoji;
+                Toast.success('Avatar emoji mis à jour !');
+
+                // Mettre à jour l'affichage
+                const currentUserPfp = document.getElementById('currentUserPfp');
+                if (currentUserPfp) {
+                    const newPfp = Utils.createPfp(AppState.pseudo, 32, '', this.selectedEmoji);
+                    currentUserPfp.replaceWith(newPfp);
+                    newPfp.id = 'currentUserPfp';
+                }
+            } else {
+                Toast.error(data.error || 'Erreur');
+            }
+        } catch (error) {
+            console.error('Erreur:', error);
             Toast.error('Erreur serveur');
         }
     },
@@ -1185,6 +1375,15 @@ const App = {
         Presence.startHeartbeat();
         Chat.loadInitialMessages();
         Chat.startSSE();
+
+        // Vérifier les DMs non lus toutes les 5 secondes
+        setInterval(() => {
+            DM.checkAllDMs();
+        }, 5000);
+
+        // Première vérification immédiate
+        DM.checkAllDMs();
+
         console.log('✅ App démarrée');
     }
 };
