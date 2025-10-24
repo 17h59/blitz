@@ -78,7 +78,10 @@ try {
                 'pseudo' => $pseudo,
                 'session_id' => $sessionId,
                 'csrf_token' => $csrfToken,
-                'is_temporary' => $isTemporary
+                'is_temporary' => $isTemporary,
+                'bio' => '',
+                'profile_pic' => '',
+                'emoji_avatar' => ''
             ]);
             break;
             
@@ -91,28 +94,28 @@ try {
             }
             
             // Récupérer l'utilisateur
-            $stmt = $db->prepare('SELECT id, pseudo, password_hash, is_temporary, is_admin, bio, profile_pic FROM users WHERE pseudo = ?');
+            $stmt = $db->prepare('SELECT id, pseudo, password_hash, is_temporary, is_admin, bio, profile_pic, emoji_avatar FROM users WHERE pseudo = ?');
             $stmt->bindValue(1, $pseudo, SQLITE3_TEXT);
             $result = $stmt->execute()->fetchArray(SQLITE3_ASSOC);
-            
+
             if (!$result) {
                 exit(json_encode(['success' => false, 'error' => 'Pseudo ou mot de passe incorrect']));
             }
-            
+
             // Vérifier le mot de passe
             if (!password_verify($password, $result['password_hash'])) {
                 exit(json_encode(['success' => false, 'error' => 'Pseudo ou mot de passe incorrect']));
             }
-            
+
             // Mettre à jour last_login
             $stmt = $db->prepare('UPDATE users SET last_login = ? WHERE id = ?');
             $stmt->bindValue(1, time(), SQLITE3_INTEGER);
             $stmt->bindValue(2, $result['id'], SQLITE3_INTEGER);
             $stmt->execute();
-            
+
             $sessionId = bin2hex(random_bytes(16));
             $csrfToken = generateCSRFToken($db, $result['id']);
-            
+
             // Créer la session
             session_start();
             $_SESSION['user_id'] = $result['id'];
@@ -121,7 +124,7 @@ try {
             $_SESSION['csrf_token'] = $csrfToken;
             $_SESSION['is_temporary'] = $result['is_temporary'];
             $_SESSION['is_admin'] = $result['is_admin'];
-            
+
             echo json_encode([
                 'success' => true,
                 'user_id' => $result['id'],
@@ -131,7 +134,8 @@ try {
                 'is_temporary' => $result['is_temporary'],
                 'is_admin' => $result['is_admin'],
                 'bio' => $result['bio'],
-                'profile_pic' => $result['profile_pic']
+                'profile_pic' => $result['profile_pic'],
+                'emoji_avatar' => $result['emoji_avatar'] ?? ''
             ]);
             break;
             

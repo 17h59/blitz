@@ -185,11 +185,37 @@
             <div class="settings-section">
                 <h3>Profil</h3>
                 <div class="form-group">
-                    <label>Photo de profil</label>
-                    <input type="file" id="profilePicInput" accept="image/jpeg,image/png,image/webp,image/jpg">
-                    <small style="color: var(--text-tertiary); font-size: 12px; display: block; margin-top: 4px;">
-                        Sélectionne une image pour la téléverser automatiquement (max 5MB)
-                    </small>
+                    <label>Avatar emoji</label>
+                    <div id="emojiPicker" style="display: grid; grid-template-columns: repeat(8, 1fr); gap: 8px; margin-bottom: 12px;">
+                        <button class="emoji-btn" data-emoji="😀">😀</button>
+                        <button class="emoji-btn" data-emoji="😎">😎</button>
+                        <button class="emoji-btn" data-emoji="🤔">🤔</button>
+                        <button class="emoji-btn" data-emoji="😊">😊</button>
+                        <button class="emoji-btn" data-emoji="🥳">🥳</button>
+                        <button class="emoji-btn" data-emoji="😇">😇</button>
+                        <button class="emoji-btn" data-emoji="🤓">🤓</button>
+                        <button class="emoji-btn" data-emoji="😴">😴</button>
+                        <button class="emoji-btn" data-emoji="🐶">🐶</button>
+                        <button class="emoji-btn" data-emoji="🐱">🐱</button>
+                        <button class="emoji-btn" data-emoji="🦊">🦊</button>
+                        <button class="emoji-btn" data-emoji="🐼">🐼</button>
+                        <button class="emoji-btn" data-emoji="🐨">🐨</button>
+                        <button class="emoji-btn" data-emoji="🦁">🦁</button>
+                        <button class="emoji-btn" data-emoji="🐯">🐯</button>
+                        <button class="emoji-btn" data-emoji="🐸">🐸</button>
+                        <button class="emoji-btn" data-emoji="🚀">🚀</button>
+                        <button class="emoji-btn" data-emoji="⚡">⚡</button>
+                        <button class="emoji-btn" data-emoji="🔥">🔥</button>
+                        <button class="emoji-btn" data-emoji="⭐">⭐</button>
+                        <button class="emoji-btn" data-emoji="💎">💎</button>
+                        <button class="emoji-btn" data-emoji="🎮">🎮</button>
+                        <button class="emoji-btn" data-emoji="🎨">🎨</button>
+                        <button class="emoji-btn" data-emoji="🎵">🎵</button>
+                    </div>
+                    <div id="currentEmojiPreview" style="text-align: center; font-size: 48px; margin-bottom: 12px;">
+                        -
+                    </div>
+                    <button id="saveEmojiBtn" class="primary-btn" style="width: 100%; margin-bottom: 12px;">Enregistrer l'emoji</button>
                 </div>
                 <div class="form-group">
                     <label>Biographie (max 1000 caractères)</label>

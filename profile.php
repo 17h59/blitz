@@ -68,19 +68,39 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 if (!isset($_SESSION['user_id'])) {
                     exit(json_encode(['success' => false, 'error' => 'Non authentifié']));
                 }
-                
+
                 $bio = sanitizeInput($_POST['bio'] ?? '');
-                
+
                 if (strlen($bio) > 1000) {
                     exit(json_encode(['success' => false, 'error' => 'Bio trop longue (max 1000 caractères)']));
                 }
-                
+
                 $stmt = $db->prepare('UPDATE users SET bio = ? WHERE id = ?');
                 $stmt->bindValue(1, $bio, SQLITE3_TEXT);
                 $stmt->bindValue(2, $_SESSION['user_id'], SQLITE3_INTEGER);
                 $stmt->execute();
-                
+
                 echo json_encode(['success' => true, 'bio' => $bio]);
+                break;
+
+            case 'update_emoji':
+                if (!isset($_SESSION['user_id'])) {
+                    exit(json_encode(['success' => false, 'error' => 'Non authentifié']));
+                }
+
+                $emoji = $_POST['emoji'] ?? '';
+
+                // Validation basique : vérifier que c'est un seul caractère emoji
+                if (mb_strlen($emoji) > 10) {
+                    exit(json_encode(['success' => false, 'error' => 'Emoji invalide']));
+                }
+
+                $stmt = $db->prepare('UPDATE users SET emoji_avatar = ? WHERE id = ?');
+                $stmt->bindValue(1, $emoji, SQLITE3_TEXT);
+                $stmt->bindValue(2, $_SESSION['user_id'], SQLITE3_INTEGER);
+                $stmt->execute();
+
+                echo json_encode(['success' => true, 'emoji_avatar' => $emoji]);
                 break;
                 
             case 'upload_profile_pic':
@@ -178,8 +198,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     
     try {
         $db = new SQLite3(__DIR__ . '/data/blitz.db');
-        
-        $stmt = $db->prepare('SELECT pseudo, bio, profile_pic, created_at, is_admin FROM users WHERE pseudo = ?');
+
+        $stmt = $db->prepare('SELECT pseudo, bio, profile_pic, emoji_avatar, created_at, is_admin FROM users WHERE pseudo = ?');
         $stmt->bindValue(1, $pseudo, SQLITE3_TEXT);
         $result = $stmt->execute()->fetchArray(SQLITE3_ASSOC);
         
