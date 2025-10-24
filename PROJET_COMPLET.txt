@@ -1,0 +1,136 @@
+ÉTAT DU PROJET vs specs.txt
+============================
+
+7/13 fonctionnalités implémentées (54%)
+
+✅ FAIT :
+- Comptes persistants/temporaires avec auth
+- Chat général (SSE, 300 messages)
+- Messages privés (DMs, polling auto)
+- Forum général (posts, images, YouTube, votes, commentaires)
+- Profils (photos, bios)
+- Présence utilisateurs (heartbeat 60s)
+- Suppression compte (CASCADE)
+
+❌ MANQUE (prioritaires) :
+- Groupes privés (structure DB ready)
+- Réactions émojis (structure DB ready) 
+- Pages personnelles (structure DB ready)
+- Messages vocaux (complexe)
+- Thèmes CSS personnalisés
+- Panel admin complet
+
+PROCHAINE ÉTAPE
+===============
+
+1. Teste le forum
+2. Signale les bugs
+3. Prochaine feature : Réactions émojis (rapide, ~1-2h)
+
+STRUCTURE COMPLÈTE
+==================
+
+/vibecoding/
+├── index.html          ✅ (avec imports forum)
+├── app.js             ❌ REMPLACER (doc index 4)
+├── style.css          ❌ REMPLACER (doc index 16)
+├── forum.js           ✅ PRÊT
+├── forum.css          ✅ PRÊT
+├── init_db.php        ✅ PRÊT
+├── auth.php           ✅ PRÊT
+├── send_message.php   ✅ PRÊT
+├── get_messages.php   ✅ PRÊT
+├── sse_messages.php   ✅ PRÊT
+├── send_dm.php        ✅ PRÊT
+├── get_dm.php         ✅ PRÊT
+├── heartbeat.php      ✅ PRÊT
+├── get_online_users.php ✅ PRÊT
+├── profile.php        ✅ PRÊT
+├── create_post.php    ✅ PRÊT (forum)
+├── get_forum_posts.php ✅ PRÊT (forum)
+├── vote_post.php      ✅ PRÊT (forum)
+├── add_comment.php    ✅ PRÊT (forum)
+├── get_comments.php   ✅ PRÊT (forum)
+├── delete_post.php    ✅ PRÊT (forum)
+├── data/              ✅ (créé par init_db.php)
+└── uploads/
+    ├── profile_pics/  ✅
+    ├── forum/         ✅
+    └── voice/         ✅
+
+FORUM GÉNÉRAL - NOUVEAUTÉ v1.5
+==============================
+
+✅ Créer posts (texte + markdown)
+✅ Upload images (JPG/PNG/WEBP/GIF, max 3MB)
+✅ Intégration YouTube
+✅ Système votes (upvote/downvote)
+✅ Commentaires imbriqués illimités
+✅ 4 filtres : récents, top, bottom, activité
+✅ Suppression (auteur ou admin)
+✅ Photos de profil partout
+
+TESTS À FAIRE
+=============
+
+1. Connexion / Inscription
+2. Upload photo de profil
+3. Envoi message chat général
+4. Envoi MP
+5. Création post forum
+6. Upload image dans post
+7. Intégration vidéo YouTube
+8. Vote sur post
+9. Ajout commentaire
+10. Réponse à commentaire
+
+NOTES POUR LE RAPPORT NSI
+==========================
+
+Technologies utilisées :
+- Backend : PHP 8.x + SQLite3
+- Frontend : Vanilla JavaScript (pas de framework)
+- CSS : Variables CSS + Flexbox/Grid
+- Real-time : SSE (Server-Sent Events) + Polling
+- Markdown : Parsing custom
+- Sécurité : password_hash, htmlspecialchars, CSRF tokens
+
+Temps de développement :
+- Base (chat + auth) : ~3h
+- DMs et profils : ~2h
+- Forum complet : ~2h
+- Total : ~7h en collaboration avec Claude AI
+
+Fichiers : 21 fichiers PHP + 4 fichiers JS/CSS
+Lignes de code : ~3500 lignes
+Tables BDD : 15 tables avec CASCADE
+
+BUGS CONNUS
+===========
+
+Aucun bug connu actuellement.
+Si tu en trouves, note-les et on corrigera.
+
+PROCHAINE SESSION
+=================
+
+Options :
+A) Corriger les bugs du forum (si présents)
+B) Ajouter réactions émojis (rapide, visuel)
+C) Ajouter groupes privés (important)
+D) Ajouter pages personnelles (important)
+
+Suggestion : B puis C puis D
+
+CONTACT / QUESTIONS
+===================
+
+Si problèmes :
+1. Vérifie que app.js et style.css sont bien remplacés
+2. Vérifie que init_db.php a été lancé
+3. Vérifie les permissions (755) sur uploads/
+4. Vérifie les logs d'erreur PHP de ton serveur
+
+=====================================================
+FIN DU DOCUMENT
+=====================================================

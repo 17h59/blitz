@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Blitz - Réseau Social</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="forum.css">
+</head>
+<body>
+    <!-- Modal de connexion/inscription -->
+    <div id="loginModal" class="modal">
+        <div class="modal-content">
+            <h1>Bienvenue sur Blitz</h1>
+            
+            <!-- Choix du type de compte -->
+            <div id="accountTypeChoice" class="account-type-choice">
+                <button id="persistentBtn" class="account-type-btn">
+                    <div class="account-type-icon">🔐</div>
+                    <div class="account-type-title">Compte persistant</div>
+                    <div class="account-type-desc">Garde tes données après déconnexion</div>
+                </button>
+                <button id="temporaryBtn" class="account-type-btn">
+                    <div class="account-type-icon">👻</div>
+                    <div class="account-type-title">Compte temporaire</div>
+                    <div class="account-type-desc">Tout est supprimé à la déconnexion</div>
+                </button>
+            </div>
+            
+            <!-- Formulaire inscription compte persistant -->
+            <div id="registerForm" style="display: none;">
+                <h2>Créer un compte persistant</h2>
+                <input type="text" id="registerPseudo" maxlength="20" placeholder="Pseudo (2-20 caractères)">
+                <input type="password" id="registerPassword" placeholder="Mot de passe (min 6 caractères)">
+                <button id="registerBtn">S'inscrire</button>
+                <p class="link" id="showLoginLink">Déjà un compte ? Se connecter</p>
+                <p class="error" id="registerError"></p>
+            </div>
+            
+            <!-- Formulaire connexion -->
+            <div id="loginForm" style="display: none;">
+                <h2>Se connecter</h2>
+                <input type="text" id="loginPseudo" maxlength="20" placeholder="Pseudo">
+                <input type="password" id="loginPassword" placeholder="Mot de passe">
+                <button id="loginBtn">Connexion</button>
+                <p class="link" id="showRegisterLink">Pas de compte ? S'inscrire</p>
+                <p class="error" id="loginError"></p>
+            </div>
+            
+            <!-- Formulaire compte temporaire -->
+            <div id="tempForm" style="display: none;">
+                <h2>Compte temporaire</h2>
+                <p class="warning">⚠️ Tout sera supprimé à la déconnexion</p>
+                <input type="text" id="tempPseudo" maxlength="20" placeholder="Pseudo temporaire">
+                <button id="tempBtn">Créer</button>
+                <p class="error" id="tempError"></p>
+            </div>
+            
+            <p class="link" id="backToChoice" style="display: none;">← Retour</p>
+        </div>
+    </div>
+
+    <!-- Interface principale -->
+    <div id="app" style="display: none;">
+        <div class="container">
+            <!-- Colonne gauche : navigation -->
+            <aside class="sidebar">
+                <div class="sidebar-section">
+                    <h2>Navigation</h2>
+                    <div class="channel-item active" data-channel="general">
+                        <span class="channel-icon">#</span>
+                        <span>Chat général</span>
+                    </div>
+                    <div class="channel-item" data-channel="forum">
+                        <span class="channel-icon">📰</span>
+                        <span>Forum</span>
+                    </div>
+                    <div class="channel-item" data-channel="mypage">
+                        <span class="channel-icon">👤</span>
+                        <span>Ma page</span>
+                    </div>
+                </div>
+
+                <div class="sidebar-section">
+                    <h2>Messages privés</h2>
+                    <div id="dmsList"></div>
+                </div>
+                
+                <div class="sidebar-section">
+                    <h2>Groupes privés</h2>
+                    <div id="groupsList"></div>
+                    <button id="createGroupBtn" class="sidebar-btn">+ Créer un groupe</button>
+                </div>
+
+                <div class="sidebar-section">
+                    <h2>En ligne <span id="onlineCount">0</span></h2>
+                    <div id="usersList"></div>
+                </div>
+            </aside>
+
+            <!-- Colonne centrale : contenu -->
+            <main class="chat-area">
+                <header class="chat-header">
+                    <h1 id="chatTitle">Chat général</h1>
+                    <div class="user-info">
+                        <div class="pfp" id="currentUserPfp"></div>
+                        <span id="currentUsername"></span>
+                        <button id="settingsBtn" class="icon-btn" title="Paramètres">⚙️</button>
+                    </div>
+                </header>
+
+                <!-- Zone de chat -->
+                <div id="chatView" class="view-container">
+                    <div id="messages" class="messages"></div>
+                    
+                    <form id="messageForm" class="message-input">
+                        <button type="button" id="emojiPickerBtn" class="icon-btn">😊</button>
+                        <button type="button" id="voiceRecordBtn" class="icon-btn" title="Message vocal">🎤</button>
+                        <input type="text" id="messageInput" placeholder="Écris ton message..." maxlength="500">
+                        <button type="submit">Envoyer</button>
+                    </form>
+                </div>
+                
+                <!-- Zone forum -->
+                <div id="forumView" class="view-container" style="display: none;">
+                    <div class="forum-header">
+                        <div class="forum-filters">
+                            <button class="filter-btn active" data-filter="recent">➡️ Récents</button>
+                            <button class="filter-btn" data-filter="top">⬆️ Plus upvotés</button>
+                            <button class="filter-btn" data-filter="bottom">⬇️ Moins upvotés</button>
+                            <button class="filter-btn" data-filter="activity">🔥 Plus d'activité</button>
+                        </div>
+                        <button id="createPostBtn" class="primary-btn">+ Créer un post</button>
+                    </div>
+                    <div id="forumPosts" class="forum-posts"></div>
+                </div>
+                
+                <!-- Zone page perso -->
+                <div id="mypageView" class="view-container" style="display: none;">
+                    <div class="mypage-header">
+                        <h2>Ma page personnelle</h2>
+                        <button id="createPersonalPostBtn" class="primary-btn">+ Nouveau post</button>
+                    </div>
+                    <div id="personalPosts" class="forum-posts"></div>
+                </div>
+            </main>
+        </div>
+    </div>
+    
+    <!-- Modal profil utilisateur -->
+    <div id="profileModal" class="modal" style="display: none;">
+        <div class="modal-content profile-modal">
+            <button class="modal-close" id="closeProfileModal">×</button>
+            <div class="profile-header">
+                <div id="profilePicLarge" class="profile-pic-large"></div>
+                <div class="profile-info">
+                    <h2 id="profilePseudo"></h2>
+                    <div id="profileBadges"></div>
+                </div>
+            </div>
+            <div class="profile-bio">
+                <h3>Biographie</h3>
+                <p id="profileBioContent"></p>
+            </div>
+            <div class="profile-stats">
+                <div class="stat">
+                    <span class="stat-value" id="profilePostCount">0</span>
+                    <span class="stat-label">Posts</span>
+                </div>
+                <div class="stat">
+                    <span class="stat-value" id="profileJoinedAt">-</span>
+                    <span class="stat-label">Membre depuis</span>
+                </div>
+            </div>
+            <button id="profileMessageBtn" class="primary-btn">Envoyer un message</button>
+        </div>
+    </div>
+    
+    <!-- Modal paramètres -->
+    <div id="settingsModal" class="modal" style="display: none;">
+        <div class="modal-content settings-modal">
+            <button class="modal-close" id="closeSettingsModal">×</button>
+            <h2>Paramètres</h2>
+            
+            <div class="settings-section">
+                <h3>Profil</h3>
+                <div class="form-group">
+                    <label>Photo de profil</label>
+                    <input type="file" id="profilePicInput" accept="image/jpeg,image/png,image/webp,image/jpg">
+                    <small style="color: var(--text-tertiary); font-size: 12px; display: block; margin-top: 4px;">
+                        Sélectionne une image pour la téléverser automatiquement (max 5MB)
+                    </small>
+                </div>
+                <div class="form-group">
+                    <label>Biographie (max 1000 caractères)</label>
+                    <textarea id="bioInput" maxlength="1000" rows="5"></textarea>
+                    <button id="saveBioBtn">💾 Sauvegarder</button>
+                </div>
+            </div>
+            
+            <div class="settings-section">
+                <h3>Thème</h3>
+                <select id="themeSelect">
+                    <option value="default">Défaut (sombre moderne)</option>
+                    <option value="retro">Rétro</option>
+                    <option value="minimal">Minimal</option>
+                    <option value="neon">Néon</option>
+                    <option value="custom">Personnalisé</option>
+                </select>
+                <div id="customThemeSettings" style="display: none;">
+                    <textarea id="customCSS" placeholder="CSS personnalisé..." rows="10"></textarea>
+                    <button id="applyCustomThemeBtn">Appliquer</button>
+                </div>
+            </div>
+            
+            <div class="settings-section danger-zone">
+                <h3>Zone dangereuse</h3>
+                <button id="deleteAccountBtn" class="danger-btn">🗑️ Supprimer mon compte</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+    <script src="forum.js"></script>
+</body>
+</html>
